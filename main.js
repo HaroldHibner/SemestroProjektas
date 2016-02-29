@@ -1,6 +1,6 @@
 /*
 	PASTABA - rankos pasukimas kertasi su kumsciu, jei naudosime abu reikes nustatyti prioriteta
-	TODO - pagalvoti del pakilimo nueleidimo, gal geriau su tap, o neradus rankos naudoti hover?
+	TODO - pagalvoti del pakilimo nuleidimo, gal geriau su tap, o neradus rankos naudoti hover?
 */
 var Cylon = require('cylon');
 
