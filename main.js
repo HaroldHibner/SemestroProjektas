@@ -1,8 +1,21 @@
+/*
+	PASTABA - rankos pasukimas kertasi su kumsciu, jei naudosime abu reikes nustatyti prioriteta
+	TODO - pagalvoti del pakilimo nueleidimo, gal geriau su tap, o neradus rankos naudoti hover?
+*/
 var Cylon = require('cylon');
 
-var inFlight = false; // tikrina ar dabar skrenda
-var lifted = false;    // tikrina ar dronas pakiles 
+var ROLL_JAUTRUMAS = 0.5; // kiek reikia pasukti i sonus radianai
+var PITCH_JAUTRUMAS_PRIEKIN = 0.5 // kiek reikia delnu i prieki radianai
+var PITCH_JAUTRUMAS_ATGAL = 0.3 // kiek reikia delnu atgal radianai
+var SUKIMO_GREITIS = 0.5; // 0 - 1
+var KYLIMO_GREITIS = 0.5; // 0 - 1
+var DESINE_KAIRE_JAUTRUMAS = 60; // cia ir toliau kiek mm nuo centro randasi ranka
+var PIRMYN_ATGAL_JAUTRUMAS = 70;
+var PAKILTI_JAUTRUMAS = 400;
+var NUSILEISTI_JAUTRUMAS = 100;
 
+var inFlight = false; // tikrina ar dabar skrenda
+var lifted = false;    // tikrina ar dronas pakiles
 
 Cylon.robot({
 	connections: {
@@ -31,63 +44,79 @@ work: function(my) {
 	// calibruoja, bet nezinau ka
 	my.keyboard.on('z', function(key) {
 		console.log("calibrating");
-		my.drone.calibrate();
+		my.drone.calibrate(SUKIMO_GREITIS);
 	})
 	
 	my.leapmotion.on('frame', 
 	function(frame){
-		
 		// rankos pozicija	
 		if(frame.hands.length > 0)
 		{
+			var hand = frame.hands[0];
+			var position = hand.palmPosition;
+			var velocity = hand.palmVelocity;
+			var normal = hand.palmNormal;
+			var roll = hand.roll(); // rankos pasukimas i sonus
+			var pitch = hand.pitch();
+			var cur = position;
+			
 			// jei ranka yra
 			if(!lifted){
 				console.log("Pakeleme drona");
 				my.drone.takeoff();
 				lifted = true;
 			}
-
-			var hand = frame.hands[0];
-			var position = hand.palmPosition;
-			var velocity = hand.palmVelocity;
-			var direction = hand.direction;
-			var cur = position;
-			
 			// kumstis - nezinau kiek patikima
 			if(hand.grabStrength==1){
 				console.log("kumstis");
 			}
-		
+			//console.log(hand.roll());
+			if(roll > ROLL_JAUTRUMAS) {
+				console.log("Delnas i desine");
+				my.drone.counterClockwise(SUKIMO_GREITIS);
+			} else if(roll < -1*ROLL_JAUTRUMAS) { 
+					console.log("Delnas i kaire");
+					my.drone.clockwise(SUKIMO_GREITIS);
+			} else {
+				console.log("Delnas nepasuktas");
+			}
+			//console.log(hand.pitch());
+			PITCH_JAUTRUMAS_PRIEKIN
+			if(pitch > PITCH_JAUTRUMAS_PRIEKIN) {
+				console.log("Delnas i prieki");
+			} else if (pitch < -1*PITCH_JAUTRUMAS_ATGAL) {
+				console.log("Delnas i tave");
+			} else {
+				console.log("Delnas nepalenktas");
+			}
+			// galbut reiketu tik vienos krypties ?
 			//console.log(position[0]);
 			//console.log(position[1]);
 			//console.log(position[2]);
-			
-			// galbut reiketu tik vienos krypties ?
-			
-			if(position[1] > 400){
+			if(position[1] > PAKILTI_JAUTRUMAS){
 				console.log("kyyylam");	
 				my.drone.up(1);
-			} else if(position[1] < 100){
+			} else if(position[1] < NUSILEISTI_JAUTRUMAS){
 				console.log("leidziameees");
 				my.drone.down(1);
 			} else {
 				console.log("centras - kylam/leidziames");
 			}
-		
-			if( position[0] > 60 ){
+			
+			if( position[0] > DESINE_KAIRE_JAUTRUMAS ){
 				console.log("desinen");	
 				my.drone.right();
-			} else if( position[0] < -60 ){
+			} else if( position[0] < -1*DESINE_KAIRE_JAUTRUMAS ){
 				console.log("kairen");
 				my.drone.left();			
 			} else {
 				console.log("centras - kairen/desinen");
 			}
-		
-			if( position[2] < -70 ){
+			
+			if( position[2] < -1*PIRMYN_ATGAL_JAUTRUMAS ){
 				console.log("pirmyn");
 				my.drone.forward();
-			} else if( position[2] > 70 ){
+			} else if( position[2] > PIRMYN_ATGAL_JAUTRUMAS ){
 				console.log("atgal");
 				my.drone.back();			
 			} else {
@@ -101,8 +130,6 @@ work: function(my) {
 			lifted = false;
 			my.drone.land();
 		}
-		
-		
 		// gestai
 		if(frame.valid && frame.gestures.length > 0) {
 			
@@ -111,7 +138,7 @@ work: function(my) {
 				if(g.type == "circle" && g.state == "stop") {
 					console.log("circle");
 				}		
-				
+				// kertasi su circle - reiketu naudoti tik kuri viena
 				if(g.type == "keyTap" && g.state == "stop"){
 					console.log("tap");
 				}
